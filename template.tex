@@ -1,0 +1,78 @@
+%***********************************************************************************
+% ESTE FICHERO SE USA PARA UNIR VARIOS PDFs
+%***********************************************************************************
+
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8x]{inputenc}
+
+% Margins
+\textheight 27.5cm 
+\textwidth 18cm 
+\oddsidemargin -1.5cm
+\evensidemargin -1.5cm 
+\topmargin -3cm
+
+% Font
+\usepackage{helvet}
+% \fontfamily{phv}
+% \selectfont
+\renewcommand{\familydefault}{\sfdefault}
+
+% Table format
+\usepackage{array}
+\setlength\extrarowheight{5pt}
+
+% Logo
+\usepackage{graphicx}
+%\usepackage{fancyhdr}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+    \includegraphics[width=6cm]{Ciencias_UAM.pdf}
+    %\vspace*{2cm}
+
+    \rule{\textwidth}{0.2mm}
+    \vspace*{0.2cm}
+    
+    \Large 
+	\textbf{PROPUESTA DE PROYECTO FIN DE GRADO EN QUÍMICA (ID: _XXX_)}
+\end{center}
+
+\textbf{DATOS DEL TUTOR DEL PROYECTO Y DE LA ENTIDAD OFERTANTE}
+\vspace*{0.2cm}
+
+\begin{tabular}{|p{1.0\textwidth}|}
+\hline
+Nombre del tutor: _NAME_ \\\hline
+Categoría profesional: _CAT_ \\\hline
+Departamento, organismo al que pertenece: _DPTO_ \\\hline
+e-mail: _EMAIL_ \\\hline
+\end{tabular}
+\vspace*{0.6cm}
+
+
+\textbf{DATOS DEL PROYECTO}
+\vspace*{0.2cm}
+
+\begin{tabular}{|p{1.0\textwidth}|}
+\hline
+Título: _TITULO_ \\\hline
+Título Inglés: _TITLE_ \\\hline
+Tipo de trabajo: _TIPO_ \\\hline
+Área de conocimiento en la que se enmarca: _AREA_ \\\hline
+Breve descripción del tema, objetivos y tareas a realizar.\\
+_DESCRIP_
+\\\hline
+Capacidades y conocimientos recomendados que el estudiante debería tener para llevar a cabo este proyecto.\\
+_CAPAC_
+\\\hline
+Otra información relevante para ayudar a los estudiantes en su elección del trabajo fin de grado.\\
+_INFO_\\\hline
+Dirección del lugar donde se desarrollará el proyecto.\\
+_DIR_\\\hline
+\end{tabular}
+
+
+\end{document}
