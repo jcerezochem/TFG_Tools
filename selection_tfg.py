@@ -93,7 +93,7 @@ for i,mail in enumerate(mails):
         if str(erasmus[i]) != 'nan':
             print(f'NOTE: Entry {mail} is Erasmus, with contact {erasmus[i]}')
             status = 'Erasmus'
-        else
+        else:
             status = 'ToCheck'
     print(f'{mail:60} & {mark:5.2f} & {credit:3} & {status:10} & {url}', file=fproofs)
 fproofs.close()
@@ -123,7 +123,11 @@ ndx     = np.arange(len(credits))
 # 1) Sort by mark
 ndx_top = ndx[credits>=175]
 marks_top = marks[ndx_top]
+# Get blocks of lowering credits (indices only)
+ndx_top   = ndx_top[marks_top.argsort()[::-1]]
+# Rearrange in blocks
 credits_top = credits[ndx_top]
+marks_top = marks[ndx_top]
 ndx_top   = ndx_top[marks_top.argsort()[::-1]]
 # 2) Sort by credits
 i = 0
@@ -147,10 +151,15 @@ ndx_top = np.array(ndx_top_reord)
 # ndx_top = np.array(ndx_top_reord)
 
 # Low layer is ordered 1) by nr. credits 2) by marks 3) arrival date (TODO)
+# 1) Sort by credits
 ndx_low = ndx[credits<175]
 credits_low = credits[ndx_low]
+# Get blocks of lowering credits (indices only)
 ndx_low   = ndx_low[credits_low.argsort()[::-1]]
+# Rearrange in blocks
+credits_low = credits[ndx_low]
 marks_low = marks[ndx_low]
+# 2) Sort by mark
 i = 0
 ndx_low_reord = []
 for credit in sorted(list(set(credits_low)))[::-1]:
@@ -219,7 +228,9 @@ for i in ndx_ordered:
             options.append(option)
 
     # Make assigment
-    selected_tfg = 'Sin selección'
+    selected_tfg = {'title' : 'Sin selección',
+                    'dpto'  : 'None',
+                    'ext'   : 'No'}
     nsel = 1
     tfgs_titles = [ tfg['title'] for tfg in tfgs ]
     for option in options:
@@ -233,7 +244,7 @@ for i in ndx_ordered:
                 print(f'Unassigned {nsel}: {option_id}')
             nsel += 1
 
-    print(f'{name:35} & {selected_tfg["title"][:60]:60}...  ({nsel})')
+    print(f'{name:35} & {selected_tfg["title"][:60]:60}...  ({nsel:2})   -- {selected_tfg["dpto"]}')
     assign.append([name,selected_tfg])
 print('')
 
@@ -254,8 +265,48 @@ for i in ndx:
 df = pd.DataFrame(list(zip(selected_tfgs,selected_dptos,selected_exts,student_names)))
 df.to_excel('AsignacionTFGs.xlsx', sheet_name='TFGs')
 
-# Lo más populares
-print('Populares\n--------------')
-options1 = list(options1.values())
-for option in set(options1):
-    print(f'{option[:60]:60}...  {options1.count(option)}')
+# # Lo más populares
+# print('Populares\n--------------')
+# options1 = list(options1.values())
+# for option in set(options1):
+#     print(f'{option[:60]:60}...  {options1.count(option)}')
+
+# Distribución por departamento
+print('Distribución por departamentos\n----------------------------')
+dptos_unique = np.array(list(set(selected_dptos)))
+n_dptos = np.array([ selected_dptos.count(dpto) for dpto in dptos_unique ])
+idx = np.argsort(n_dptos)[::-1]
+dptos_unique = dptos_unique[idx]
+n_dptos = n_dptos[idx]
+print('1 departamento')
+for dpto,n_dpto in zip(dptos_unique,n_dptos):
+    if '/' in dpto:
+        continue
+    if dpto == 'None':
+        continue
+    ext_per_dpto = [ selected_exts[i] for i in range(len(selected_dptos)) if selected_dptos[i] == dpto ]
+    n_ext  = n_dpto - ext_per_dpto.count("No")
+    print(f'{dpto:65}:  {n_dpto:3} (ext: {n_ext:3})')
+print()
+print('2 departamentos')
+for dpto,n_dpto in zip(dptos_unique,n_dptos):
+    if '/' not in dpto:
+        continue
+    ext_per_dpto = [ selected_exts[i] for i in range(len(selected_dptos)) if selected_dptos[i] == dpto ]
+    n_ext  = n_dpto - ext_per_dpto.count("No")
+    print(f'{dpto:75}:  {n_dpto:3}')
+print()
+n_noassign = selected_dptos.count('None')
+print(f'Sin asignar: {n_noassign}')
+print()
+
+
+print('Externos\n----------------------------')
+for ext in set(selected_exts):
+    if ext == "No":
+        continue
+    n_ext = selected_exts.count(ext)
+    print(f'{ext:75}:  {n_ext:3}')
+print()
+
+
