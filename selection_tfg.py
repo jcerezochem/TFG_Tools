@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 debug=False
+max_equiv=2
 
 import pandas as pd
 import numpy as np
@@ -114,7 +115,7 @@ for line in ftfg:
 #-----------------------------
 # Make assignments
 #-----------------------------
-# FIRST ROUND: order students
+# FIRST ITERATION: order students
 #------------------------------
 credits = np.array(credits)
 marks   = np.array(marks)
@@ -180,27 +181,33 @@ else:
 IDs = np.array(IDs)
 prev = [None,None]
 print('Orden de prioridad\n----------------------')
-for i in ndx_ordered:
+for k,i in enumerate(ndx_ordered):
     credit = credits[i]
     mark   = marks[i]
     name   = names[i]
+    ID     = IDs[i]
     if [mark,credit] == prev:
-        print(f'{name:30} {credit:4} {mark:5.2f} *')
+        print(f'{k+1:3}- {name:35} {credit:4} {mark:5.2f} (ID:{i:3}) *')
     else:
-        print(f'{name:30} {credit:4} {mark:5.2f}')
+        print(f'{k+1:3}- {name:35} {credit:4} {mark:5.2f} (ID:{i:3})')
+    prev = [mark,credit]
 print('')
 
 # Check if there are equivalent students (same 
 students = [ [mark,credit] for mark,credit in zip(marks[ndx_ordered],credits[ndx_ordered]) ]
 students_equiv = np.array([ students.count(student) for student in students ])
-if len(students_equiv[students_equiv != 1]) != 0:
+if len(students_equiv[students_equiv != 1]) > max_equiv:
     print('Warning! equivalent students')
     sys.exit()
 
-# SECOND ROUND: get selections
+# SECOND ITERATION: get selections (prioritized)
 #------------------------------
-print('Asignación\n-----------------')
+selected_tfgs = {}
+for_second_round = []
 assign = []
+assigned_ids = []
+assigned_is = []
+# First round (prioritized) 
 for i in ndx_ordered:
     # Handle sumbitter info for mailing
     submitter_name = names[i]
@@ -212,10 +219,10 @@ for i in ndx_ordered:
     email = mails[i]  
     options_raw = [ options1[i], options2[i], options3[i], options4[i], options5[i], 
                     options6[i], options7[i], options8[i], options9[i], options10[i] ]
-    if str(more_options[i]) != 'nan':
-        reserva = (more_options[i].split(';')[:-1])
-        random.shuffle(reserva)
-        options_raw += reserva
+    #if str(more_options[i]) != 'nan':
+    #    reserva = (more_options[i].split(';')[:-1])
+    #    random.shuffle(reserva)
+    #    options_raw += reserva
     options = []
     for option in options_raw:
         if option in options:
@@ -235,8 +242,8 @@ for i in ndx_ordered:
     tfgs_titles = [ tfg['title'] for tfg in tfgs ]
     for option in options:
         if option in tfgs_titles:
-            i = tfgs_titles.index(option)
-            selected_tfg = tfgs.pop(i)
+            j = tfgs_titles.index(option)
+            selected_tfg = tfgs.pop(j)
             break
         else:
             if debug:
@@ -244,7 +251,122 @@ for i in ndx_ordered:
                 print(f'Unassigned {nsel}: {option_id}')
             nsel += 1
 
-    print(f'{name:35} & {selected_tfg["title"][:60]:60}...  ({nsel:2})   -- {selected_tfg["dpto"]}')
+    selected_tfg['nsel'] = nsel
+    selected_tfgs[i] = selected_tfg
+
+    # Track tfg ids for second round
+    if selected_tfg['title'] == 'Sin selección':
+        tfg_id = 'XXX'
+        for_second_round.append(i)
+    else:
+        tfg_id = selected_tfg['title'].split('-')[0]
+    assigned_ids.append(tfg_id)
+    assigned_is.append(i)
+
+
+# Second round: non-prioritized 
+for ii,i in enumerate(ndx_ordered):
+
+    # Generate list of selected ids in place
+    assigned_ids = []
+    assigned_is = ndx_ordered[ii:]
+    for idx in ndx_ordered[ii:]:
+        if selected_tfgs[idx]['title'] == 'Sin selección':
+            tfg_id = 'XXX'
+        else:
+            tfg_id = selected_tfgs[idx]['title'].split('-')[0]
+        assigned_ids.append(tfg_id)
+
+    if i not in for_second_round:
+        continue
+    # Handle sumbitter info for mailing
+    submitter_name = names[i]
+    submitter_mail = mails[i]
+    ID = IDs[i]
+
+    # Handle info in the Form
+    name  = names[i]
+    email = mails[i]  
+    options_raw = [ options1[i], options2[i], options3[i], options4[i], options5[i], 
+                    options6[i], options7[i], options8[i], options9[i], options10[i] ]
+    reserva = []
+    if str(more_options[i]) != 'nan':
+        reserva = (more_options[i].split(';')[:-1])
+        random.shuffle(reserva)
+        options_raw += reserva
+    options = []
+    for option in options_raw:
+        if option in options:
+            option_id = option.split('-')[0]
+            if debug:
+                print(f'Repeated selection: {option_id}')
+        elif str(option) == 'nan':
+            pass
+        else:
+            options.append(option)
+
+    # Make assigment
+    null_tfg = {'title' : 'Sin selección',
+                'dpto'  : 'None',
+                'ext'   : 'No',
+                'nsel'  : 0}
+    selected_tfg = null_tfg
+    nsel = 1
+    tfgs_titles = [ tfg['title'] for tfg in tfgs ]
+    options_ids = [ item.split('-')[0] for item in options ]
+    for option in options:
+        if option in tfgs_titles:
+            j = tfgs_titles.index(option)
+            selected_tfg = tfgs.pop(j)
+            break
+        else:
+            if debug:
+                option_id = option.split('-')[0]
+                print(f'Unassigned {nsel}: {option_id}')
+            nsel += 1
+
+    if selected_tfg['title'] == 'Sin selección':
+        tfg_changed = False
+        for option in options:
+            option_id = option.split('-')[0]
+            if option_id in assigned_ids:
+                print('This was available!')
+                print(option_id)
+                k = assigned_ids.index(option_id)
+                kk = assigned_is[k]
+                tfg_changed = True
+                break
+        options_ids = [ item.split('-')[0] for item in reserva ]
+        if tfg_changed:
+            print(selected_tfgs[kk]['title'])
+            print(f'{name} ({i}) is reassigned')
+            print('Remaining were:', assigned_ids)
+            print('His/her reserve:', options_ids)
+            print('Replaced with', kk)
+            print('')
+            for_second_round.append(kk)
+            selected_tfg = selected_tfgs[kk]
+            selected_tfgs[kk] = null_tfg
+        else:
+            print(f'{name} ({i}) remain unassigned')
+            print('Remaining were:', assigned_ids)
+            print('His/her reserve:', options_ids)
+            print('')
+
+    selected_tfg['nsel'] = nsel
+    selected_tfgs[i] = selected_tfg
+
+# Print assiements
+print('Asignación\n-----------------')
+for k,i in enumerate(ndx_ordered):
+    # Handle info in the Form
+    name  = names[i]
+    email = mails[i]  
+    ID = IDs[i]
+
+    selected_tfg = selected_tfgs[i]
+    nsel = selected_tfg['nsel']
+    print(f'{k+1:3}- {name:35} & {selected_tfg["title"][:60]:60}...  ({nsel:2})   -- {selected_tfg["dpto"]}')
     assign.append([name,selected_tfg])
 print('')
 
