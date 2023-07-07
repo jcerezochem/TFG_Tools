@@ -109,7 +109,10 @@ tfgs = []
 for line in ftfg:
     tfg = {'title': line.split('&')[0].strip(),
            'dpto' : line.split('&')[1].strip(),
-           'ext'  : line.split('&')[2].strip()}
+           'ext'  : line.split('&')[2].strip(),
+           'tipo' : line.split('&')[3].strip(),
+           'tutor': line.split('&')[4].strip(),
+           'url'  : line.split('&')[5].strip()}
     tfgs.append(tfg)
 
 #-----------------------------
@@ -129,7 +132,6 @@ ndx_top   = ndx_top[marks_top.argsort()[::-1]]
 # Rearrange in blocks
 credits_top = credits[ndx_top]
 marks_top = marks[ndx_top]
-ndx_top   = ndx_top[marks_top.argsort()[::-1]]
 # 2) Sort by credits
 i = 0
 ndx_top_reord = []
@@ -205,8 +207,6 @@ if len(students_equiv[students_equiv != 1]) > max_equiv:
 selected_tfgs = {}
 for_second_round = []
 assign = []
-assigned_ids = []
-assigned_is = []
 # First round (prioritized) 
 for i in ndx_ordered:
     # Handle sumbitter info for mailing
@@ -219,10 +219,11 @@ for i in ndx_ordered:
     email = mails[i]  
     options_raw = [ options1[i], options2[i], options3[i], options4[i], options5[i], 
                     options6[i], options7[i], options8[i], options9[i], options10[i] ]
-    #if str(more_options[i]) != 'nan':
-    #    reserva = (more_options[i].split(';')[:-1])
-    #    random.shuffle(reserva)
-    #    options_raw += reserva
+    reserva = []
+    if str(more_options[i]) != 'nan':
+        reserva = (more_options[i].split(';')[:-1])
+        #random.shuffle(reserva)
+        #options_raw += reserva
     options = []
     for option in options_raw:
         if option in options:
@@ -260,11 +261,10 @@ for i in ndx_ordered:
         for_second_round.append(i)
     else:
         tfg_id = selected_tfg['title'].split('-')[0]
-    assigned_ids.append(tfg_id)
-    assigned_is.append(i)
 
 
 # Second round: non-prioritized 
+selected_random = []
 for ii,i in enumerate(ndx_ordered):
 
     # Generate list of selected ids in place
@@ -309,6 +309,7 @@ for ii,i in enumerate(ndx_ordered):
     null_tfg = {'title' : 'Sin selección',
                 'dpto'  : 'None',
                 'ext'   : 'No',
+                'tutor' : 'Contactar con coordinación TFG',
                 'nsel'  : 0}
     selected_tfg = null_tfg
     nsel = 1
@@ -330,28 +331,61 @@ for ii,i in enumerate(ndx_ordered):
         for option in options:
             option_id = option.split('-')[0]
             if option_id in assigned_ids:
-                print('This was available!')
-                print(option_id)
                 k = assigned_ids.index(option_id)
                 kk = assigned_is[k]
                 tfg_changed = True
                 break
         options_ids = [ item.split('-')[0] for item in reserva ]
         if tfg_changed:
-            print(selected_tfgs[kk]['title'])
-            print(f'{name} ({i}) is reassigned')
-            print('Remaining were:', assigned_ids)
-            print('His/her reserve:', options_ids)
-            print('Replaced with', kk)
-            print('')
+        #    print(f'{name} ({i}) is reassigned, taking project:')
+        #    print(selected_tfgs[kk]['title'])
+        #    print('Remaining were:', assigned_ids)
+        #    print('His/her reserve:', options_ids)
+        #    print(f'Replaced with {names[kk]} ({kk})')
+        #    print('')
             for_second_round.append(kk)
             selected_tfg = selected_tfgs[kk]
             selected_tfgs[kk] = null_tfg
-        else:
-            print(f'{name} ({i}) remain unassigned')
-            print('Remaining were:', assigned_ids)
-            print('His/her reserve:', options_ids)
-            print('')
+        #else:
+        #    print(f'{name} ({i}) remain unassigned')
+        #    print('Remaining were:', assigned_ids)
+        #    print('His/her reserve:', options_ids)
+        #    print('')
+
+    if nsel > 10:
+        # Review available in reserved
+        options_ids = [ item.split('-')[0] for item in reserva ]
+        print(f'{name} ({i}) usa la reserva')
+        print('Su primera opción')
+        print(options1[i])
+        print('Su reserva:', options_ids)
+        print('Disponibles:')
+        n_avail = 0
+        for tfg_id in options_ids:
+            #print(f'Looking for: {tfg_id}')
+            for tfg in tfgs:
+                if  tfg_id in tfg['title']: 
+                    print(tfg['title'])
+                    n_avail += 1
+            if tfg_id in selected_tfg['title']:
+                n_avail += 1
+                if tfg_changed:
+                    print(selected_tfg['title']+f'quitado a alguien posterior de 1a ronda')
+                else:
+                    print(selected_tfg['title'])
+            elif tfg_id in assigned_ids:
+                k = assigned_ids.index(tfg_id)
+                kk = assigned_is[k]
+                print(selected_tfgs[kk]['title']+f' -- cogido por alguien posterior en 1a ronda')
+                n_avail += 1
+        for tfg_id in options_ids:
+            for tfg in selected_random:
+                if  tfg_id in tfg['title']:
+                    print(tfg['title']+f' -- cogido por alguien con {tfg["n_avail"]} opciones')
+        print('')
+        selected_random.append({'title':selected_tfg['title'],
+                                'n_avail':n_avail})
+
 
     selected_tfg['nsel'] = nsel
     selected_tfgs[i] = selected_tfg
@@ -378,14 +412,26 @@ selected_tfgs = []
 student_names = []
 selected_dptos= []
 selected_exts = []
+selected_tutors = []
 for i in ndx:
     student_names.append(assign[i][0])
     selected_tfgs.append(assign[i][1]['title'])
     selected_dptos.append(assign[i][1]['dpto'])
     selected_exts.append(assign[i][1]['ext'])
+    selected_tutors.append(assign[i][1]['tutor'])
 # Generate excel
-df = pd.DataFrame(list(zip(selected_tfgs,selected_dptos,selected_exts,student_names)))
+df = pd.DataFrame(list(zip(selected_tfgs,selected_dptos,selected_exts,selected_tutors,student_names)))
 df.to_excel('AsignacionTFGs.xlsx', sheet_name='TFGs')
+
+# Print unasigned projects (to offer students)
+IDs         = [ tfg['title'] for tfg in tfgs ]
+dptos       = [ tfg['dpto']  for tfg in tfgs ]
+extern      = [ tfg['ext']   for tfg in tfgs ]
+tipos_tfg   = [ tfg['tipo']  for tfg in tfgs ]
+links_list  = [ tfg['url']   for tfg in tfgs ]
+df = pd.DataFrame(list(zip(IDs,dptos,extern,tipos_tfg,links_list)))
+df.to_excel('TFGsSobrantes.xlsx', sheet_name='TFGs')
+
 
 # # Lo más populares
 # print('Populares\n--------------')
